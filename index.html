@@ -251,6 +251,33 @@ input[type=color]{border:1px solid var(--bm-gray-50); border-radius:10px; backgr
 .legend .li{display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:600; color:var(--bm-text-muted);}
 .legend .sw{width:12px; height:12px; border-radius:4px;}
 
+/* day bar (meerdere dagen) */
+.day-bar{
+  display:flex; align-items:center; gap:8px; padding:8px 20px; background:var(--bm-surface);
+  border-top:1px solid var(--bm-gray-50); box-shadow:0 2px 8px rgba(0,0,0,0.04);
+  overflow-x:auto; z-index:15;
+}
+.day-bar .lbl-days{font-weight:700; color:var(--bm-text-muted); font-size:0.76rem; margin-right:2px; white-space:nowrap;}
+.day-tab{
+  display:inline-flex; flex-direction:column; align-items:flex-start; gap:1px;
+  padding:5px 14px; border-radius:var(--bm-radius-md); border:1px solid var(--bm-gray-50);
+  background:var(--bm-bg); cursor:pointer; color:var(--bm-text-heading); white-space:nowrap;
+  transition:all .12s var(--bm-ease);
+}
+.day-tab:hover{border-color:var(--bm-teal);}
+.day-tab .d-name{font-weight:700; font-size:0.82rem; line-height:1.1;}
+.day-tab .d-sub{font-size:0.7rem; opacity:0.85; font-weight:600;}
+.day-tab.sel{background:var(--bm-teal); color:#fff; border-color:var(--bm-teal);}
+
+/* setup-kaart in lege staat */
+.setup-card{
+  display:flex; flex-direction:column; gap:14px; width:100%; max-width:380px; text-align:left;
+  background:var(--bm-surface); border:1px solid var(--bm-gray-50); border-radius:var(--bm-radius-md);
+  padding:20px; box-shadow:var(--bm-shadow-subtle); margin-bottom:6px;
+}
+.setup-card .modal-row{display:flex; gap:12px;}
+.setup-card .modal-row > *{flex:1; min-width:0;}
+
 .toast{
   position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:200;
   background:var(--bm-teal-deep); color:#fff; padding:11px 20px; border-radius:var(--bm-radius-full);
@@ -282,11 +309,10 @@ input[type=color]{border:1px solid var(--bm-gray-50); border-radius:10px; backgr
     <div class="brand"><span class="dot"></span><span class="name">Event Planner</span></div>
     <div class="event-meta">
       <input type="text" id="eventName" placeholder="Naam van het event" />
-      <input type="date" id="eventDate" class="hide-mobile" />
     </div>
     <div class="spacer"></div>
     <div class="toolbar">
-      <button class="btn btn-ghost btn-sm hide-mobile" id="btnTimes">🕗 Tijden</button>
+      <button class="btn btn-ghost btn-sm" id="btnEvent">📅 Datum &amp; tijd</button>
       <button class="btn btn-ghost btn-sm" id="btnColleagues">👥 Collega's</button>
       <button class="btn btn-ghost btn-sm hide-mobile" id="btnTypes">🏷️ Blok-types</button>
       <button class="btn btn-primary btn-sm" id="btnShare">🔗 Delen</button>
@@ -296,6 +322,9 @@ input[type=color]{border:1px solid var(--bm-gray-50); border-radius:10px; backgr
       <button class="btn btn-ghost btn-sm hide-mobile" id="btnNew" title="Nieuwe planning">＋ Nieuw</button>
     </div>
   </div>
+
+  <!-- Dagen -->
+  <div class="day-bar" id="dayBar" style="display:none"></div>
 
   <!-- Planner -->
   <div class="planner-wrap" id="plannerWrap">
@@ -334,9 +363,11 @@ function initials(name){
 
 /* ---------- default state ---------- */
 function defaultState(){
+  const d0 = uid();
   return {
     eventName:"",
-    eventDate: todayISO(),
+    days: [{id:d0, date: todayISO()}],
+    activeDayId: d0,
     dayStart: 8*60,
     dayEnd: 24*60,
     rooms: [],
@@ -346,6 +377,8 @@ function defaultState(){
       {id:"t_place", name:"Plaatsing",              color:"#00AABB", builtin:true},
       {id:"t_demo",  name:"Demontage",              color:"#E8A33D", builtin:true},
       {id:"t_trans", name:"Transport",              color:"#6C7AE0", builtin:true},
+      {id:"t_load",  name:"Laden",                  color:"#3C8C5A", builtin:true},
+      {id:"t_unload",name:"Lossen",                 color:"#B5762B", builtin:true},
     ],
     blocks: []
   };
@@ -369,15 +402,23 @@ function migrate(s){
   // veilige defaults voor ontbrekende velden
   const d = defaultState();
   s.eventName = s.eventName ?? "";
-  s.eventDate = s.eventDate ?? d.eventDate;
+  // dagen: oud model had één 'eventDate' → zet om naar days[]
+  if(!Array.isArray(s.days) || !s.days.length){
+    s.days = [{id: uid(), date: s.eventDate || d.days[0].date}];
+  }
+  s.days.forEach(dd=>{ if(!dd.id) dd.id=uid(); if(!dd.date) dd.date=todayISO(); });
+  if(!s.activeDayId || !s.days.some(x=>x.id===s.activeDayId)) s.activeDayId = s.days[0].id;
+  delete s.eventDate; // oud veld opruimen
   s.dayStart  = s.dayStart  ?? d.dayStart;
   s.dayEnd    = s.dayEnd    ?? d.dayEnd;
   s.rooms     = Array.isArray(s.rooms) ? s.rooms : [];
   s.colleagues= Array.isArray(s.colleagues) ? s.colleagues : [];
   s.types     = Array.isArray(s.types) && s.types.length ? s.types : d.types;
+  // zorg dat alle standaardtypes bestaan (bv. nieuw toegevoegde Laden/Lossen)
+  d.types.forEach(dt=>{ if(!s.types.some(t=>t.id===dt.id)) s.types.push({...dt}); });
   s.blocks    = Array.isArray(s.blocks) ? s.blocks : [];
   s.rooms.forEach((r,i)=>{ if(!Array.isArray(r.colleagueIds)) r.colleagueIds=[]; if(!r.color) r.color=ROOM_COLORS[i%ROOM_COLORS.length]; });
-  s.blocks.forEach(b=>{ if(!Array.isArray(b.colleagueIds)) b.colleagueIds=[]; });
+  s.blocks.forEach(b=>{ if(!Array.isArray(b.colleagueIds)) b.colleagueIds=[]; if(!b.dayId) b.dayId=s.activeDayId; });
   return s;
 }
 
@@ -386,13 +427,34 @@ function typeById(id){ return state.types.find(t=>t.id===id) || state.types[0]; 
 function colById(id){ return state.colleagues.find(c=>c.id===id); }
 function roomById(id){ return state.rooms.find(r=>r.id===id); }
 
-// is een collega bezig in [start,end)?  geeft het conflicterende blok terug of null
-function busyBlock(colleagueId, start, end, excludeBlockId){
+// is een collega bezig in [start,end) op een bepaalde dag?  geeft het conflicterende blok terug of null
+function busyBlock(colleagueId, start, end, excludeBlockId, dayId){
   return state.blocks.find(b =>
     b.id !== excludeBlockId &&
+    b.dayId === dayId &&
     b.colleagueIds.includes(colleagueId) &&
     b.start < end && b.end > start
   ) || null;
+}
+
+const WEEKDAYS = ["zo","ma","di","wo","do","vr","za"];
+function fmtDayLabel(iso){
+  const d = new Date(iso + "T00:00");
+  if(isNaN(d)) return iso;
+  return WEEKDAYS[d.getDay()] + " " + pad(d.getDate()) + "/" + pad(d.getMonth()+1);
+}
+function nextDayISO(iso){
+  const d = new Date((iso||todayISO()) + "T00:00");
+  d.setDate(d.getDate()+1);
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+}
+// tijd-opties 00:00 → 24:00 in stappen van SLOT
+function timeOptsFull(sel){
+  let o="";
+  for(let m=0; m<=24*60; m+=SLOT){
+    o += `<option value="${m}" ${m===sel?'selected':''}>${m===1440?'24:00':fmtTime(m)}</option>`;
+  }
+  return o;
 }
 
 function commit(msg){
@@ -410,17 +472,39 @@ const wrap = document.getElementById('plannerWrap');
 function render(){
   // topbar fields
   document.getElementById('eventName').value = state.eventName;
-  document.getElementById('eventDate').value = state.eventDate;
+  // actieve dag moet bestaan
+  if(!state.days.some(d=>d.id===state.activeDayId)) state.activeDayId = state.days[0].id;
+  renderDayBar();
 
   if(state.rooms.length === 0){
     planner.style.minHeight = "70vh";
     planner.innerHTML = `
       <div class="empty-state">
-        <h2>Plan je event</h2>
-        <p style="max-width:420px">Voeg zalen toe en sleep blokken in de tijdlijn om te plannen wie waar wat doet.</p>
+        <h2>Nieuw event</h2>
+        <p style="max-width:440px">Stel de basis in en voeg dan zalen toe. Je kan dit later altijd aanpassen.</p>
+        <div class="setup-card">
+          <label class="fld">Naam van het event
+            <input type="text" id="esName" value="${esc(state.eventName)}" placeholder="bv. Bedrijfsfeest Acme" />
+          </label>
+          <label class="fld">Datum
+            <input type="date" id="esDate" value="${state.days[0].date}" />
+          </label>
+          <div class="modal-row">
+            <label class="fld">Van<select id="esStart">${timeOptsFull(state.dayStart)}</select></label>
+            <label class="fld">Tot<select id="esEnd">${timeOptsFull(state.dayEnd)}</select></label>
+          </div>
+        </div>
         <button class="btn btn-primary" id="esAddRoom">＋ Eerste zaal toevoegen</button>
         <button class="btn btn-ghost btn-sm" id="esAddCol">Eerst collega's toevoegen</button>
       </div>`;
+    planner.querySelector('#esName').oninput = e=>{ state.eventName=e.target.value; document.getElementById('eventName').value=e.target.value; save(); };
+    planner.querySelector('#esDate').onchange = e=>{ state.days[0].date=e.target.value; save(); renderDayBar(); };
+    planner.querySelector('#esStart').onchange = e=>{ state.dayStart=+e.target.value; save(); };
+    planner.querySelector('#esEnd').onchange = e=>{
+      const v=+e.target.value;
+      if(v<=state.dayStart){ toast("Einduur moet na het beginuur liggen"); e.target.value=state.dayEnd; return; }
+      state.dayEnd=v; save();
+    };
     planner.querySelector('#esAddRoom').onclick = ()=> addRoom();
     planner.querySelector('#esAddCol').onclick = ()=> openColleaguesModal();
     return;
@@ -462,8 +546,8 @@ function render(){
     for(let h=0; h<=hours; h++){
       html += `<div class="hour-line" style="top:${h*64}px"></div>`;
     }
-    // blocks
-    state.blocks.filter(b=>b.roomId===r.id).forEach(b=>{
+    // blocks (alleen van de actieve dag)
+    state.blocks.filter(b=>b.roomId===r.id && b.dayId===state.activeDayId).forEach(b=>{
       html += blockHTML(b);
     });
     html += `</div>`;
@@ -474,6 +558,33 @@ function render(){
   planner.innerHTML = html;
 
   bindGridEvents();
+}
+
+function renderDayBar(){
+  const bar = document.getElementById('dayBar');
+  if(state.rooms.length === 0){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  let h = `<span class="lbl-days">Dagen</span>`;
+  state.days.forEach((d,i)=>{
+    h += `<button class="day-tab ${d.id===state.activeDayId?'sel':''}" data-day="${d.id}">
+            <span class="d-name">Dag ${i+1}</span>
+            <span class="d-sub">${fmtDayLabel(d.date)}</span>
+          </button>`;
+  });
+  h += `<button class="btn btn-outline btn-sm js-add-day">＋ Dag</button>`;
+  h += `<button class="icon-btn js-edit-days" title="Dagen &amp; tijden bewerken">⚙️</button>`;
+  bar.innerHTML = h;
+  bar.querySelectorAll('.day-tab').forEach(t=> t.onclick = ()=>{ state.activeDayId=t.dataset.day; save(); render(); });
+  bar.querySelector('.js-add-day').onclick = addDay;
+  bar.querySelector('.js-edit-days').onclick = openEventModal;
+}
+
+function addDay(){
+  const last = state.days[state.days.length-1];
+  const id = uid();
+  state.days.push({id, date: nextDayISO(last && last.date)});
+  state.activeDayId = id;
+  commit("Dag toegevoegd");
 }
 
 function blockHTML(b){
@@ -603,7 +714,7 @@ function onPointerUp(e){
     if(d.ghost) d.ghost.remove();
     let s = Math.min(d.anchor, d.cur), en = Math.max(d.anchor, d.cur);
     if(en - s < SLOT) en = s + SLOT; // minimum 15 min ook bij gewone klik
-    openBlockModal({roomId:d.roomId, start:s, end:en});
+    openBlockModal({roomId:d.roomId, start:s, end:en, dayId:state.activeDayId});
   }else if(d.mode==='move' || d.mode==='resize'){
     if(d.moved){
       save();
@@ -729,15 +840,16 @@ function openRoomTeamModal(roomId){
 function openBlockModal(data){
   const isEdit = !!data.id;
   const block = isEdit ? data : {
-    id:null, roomId:data.roomId, typeId:state.types[0].id,
+    id:null, roomId:data.roomId, dayId:data.dayId||state.activeDayId, typeId:state.types[0].id,
     label:"", start:data.start, end:data.end, colleagueIds:[]
   };
   // werk op een kopie
   const draft = JSON.parse(JSON.stringify(block));
+  if(!draft.dayId) draft.dayId = state.activeDayId;
   const room = roomById(draft.roomId);
   // suggestie: team van de zaal voorselecteren bij nieuw blok
   if(!isEdit && room && room.colleagueIds.length && draft.colleagueIds.length===0){
-    draft.colleagueIds = room.colleagueIds.filter(cid=>!busyBlock(cid, draft.start, draft.end, null));
+    draft.colleagueIds = room.colleagueIds.filter(cid=>!busyBlock(cid, draft.start, draft.end, null, draft.dayId));
   }
 
   const timeOptions = (selMin)=>{
@@ -777,6 +889,9 @@ function openBlockModal(data){
         <label class="fld">Zaal
           <select id="bkRoom">${state.rooms.map(r=>`<option value="${r.id}" ${r.id===draft.roomId?'selected':''}>${esc(r.name)}</option>`).join("")}</select>
         </label>
+        ${state.days.length>1 ? `<label class="fld">Dag
+          <select id="bkDay">${state.days.map((d,i)=>`<option value="${d.id}" ${d.id===draft.dayId?'selected':''}>Dag ${i+1} · ${fmtDayLabel(d.date)}</option>`).join("")}</select>
+        </label>` : ``}
       </div>
       <div class="field-group">
         <span class="lbl">Collega's toewijzen — <span style="color:var(--bm-text-muted);font-weight:600">wie is vrij op dit moment?</span></span>
@@ -794,7 +909,7 @@ function openBlockModal(data){
         if(draft.end<=draft.start){ toast("Eindtijd moet na de starttijd liggen"); return; }
         if(isEdit){
           const b = state.blocks.find(x=>x.id===draft.id);
-          Object.assign(b, {typeId:draft.typeId, label:draft.label, start:draft.start, end:draft.end, roomId:draft.roomId, colleagueIds:draft.colleagueIds});
+          Object.assign(b, {typeId:draft.typeId, label:draft.label, start:draft.start, end:draft.end, roomId:draft.roomId, dayId:draft.dayId, colleagueIds:draft.colleagueIds});
         }else{
           state.blocks.push({...draft, id:uid()});
         }
@@ -810,10 +925,11 @@ function openBlockModal(data){
         };
       });
       root.querySelector('#bkLabel').oninput = e=> draft.label = e.target.value;
-      const sS=root.querySelector('#bkStart'), sE=root.querySelector('#bkEnd'), sR=root.querySelector('#bkRoom');
+      const sS=root.querySelector('#bkStart'), sE=root.querySelector('#bkEnd'), sR=root.querySelector('#bkRoom'), sD=root.querySelector('#bkDay');
       sS.onchange=()=>{ draft.start=+sS.value; if(draft.end<=draft.start){ draft.end=draft.start+SLOT; syncEnd(); } renderPeople(); };
       sE.onchange=()=>{ draft.end=+sE.value; renderPeople(); };
       sR.onchange=()=>{ draft.roomId=sR.value; };
+      if(sD) sD.onchange=()=>{ draft.dayId=sD.value; renderPeople(); };
       function syncEnd(){ sE.value=draft.end; }
 
       function renderPeople(){
@@ -823,7 +939,7 @@ function openBlockModal(data){
         hint.style.display='none';
         list.innerHTML = state.colleagues.map(c=>{
           const sel = draft.colleagueIds.includes(c.id);
-          const conflict = busyBlock(c.id, draft.start, draft.end, draft.id);
+          const conflict = busyBlock(c.id, draft.start, draft.end, draft.id, draft.dayId);
           const inRoom = room && room.colleagueIds.includes(c.id);
           let badge;
           if(conflict){
@@ -959,28 +1075,68 @@ function openTypesModal(){
 }
 
 /* ============================================================
-   TIMES MODAL
+   EVENT MODAL — dagen + tijdsvenster
    ============================================================ */
-function openTimesModal(){
-  const opt=(sel)=>{let o="";for(let m=0;m<=24*60;m+=60){o+=`<option value="${m}" ${m===sel?'selected':''}>${m===24*60?'24:00':fmtTime(m)}</option>`;}return o;};
+function openEventModal(){
+  function daysHTML(){
+    return state.days.map((d,i)=>`
+      <div class="manage-item" data-day="${d.id}">
+        <span style="font-weight:700;color:var(--bm-text-muted);min-width:46px">Dag ${i+1}</span>
+        <input type="date" class="grow js-date" value="${d.date}" style="font-weight:600" />
+        ${state.days.length>1?'<button class="icon-btn js-del" title="Dag verwijderen">🗑️</button>':''}
+      </div>`).join("");
+  }
   modal({
-    title:"Tijdspanne",
-    sub:"Begin- en einduur van de tijdlijn.",
-    body:`<div class="modal-row">
-        <label class="fld">Begint om<select id="tStart">${opt(state.dayStart)}</select></label>
-        <label class="fld">Eindigt om<select id="tEnd">${opt(state.dayEnd)}</select></label>
+    title:"Datum & tijd",
+    sub:"Beheer de dag(en) en het tijdsvenster van je event.",
+    body:`
+      <div class="field-group">
+        <span class="lbl">Dagen</span>
+        <div class="manage-list" id="daysWrap">${daysHTML()}</div>
+        <button class="btn btn-outline btn-sm" id="addDayBtn" style="margin-top:10px">＋ Dag toevoegen</button>
+      </div>
+      <div class="field-group">
+        <span class="lbl">Tijdsvenster (geldt voor elke dag)</span>
+        <div class="modal-row">
+          <label class="fld">Van<select id="evStart">${timeOptsFull(state.dayStart)}</select></label>
+          <label class="fld">Tot<select id="evEnd">${timeOptsFull(state.dayEnd)}</select></label>
+        </div>
       </div>`,
     actions:[
       {label:"Annuleren", cls:"btn-ghost", onClick:c=>c()},
-      {label:"Toepassen", cls:"btn-primary", onClick:(close)=>{
-        const s=+document.getElementById('tStart').value, e=+document.getElementById('tEnd').value;
+      {label:"Opslaan", cls:"btn-primary", onClick:(close)=>{
+        const s=+document.getElementById('evStart').value, e=+document.getElementById('evEnd').value;
         if(e<=s){ toast("Einduur moet na het beginuur liggen"); return; }
         state.dayStart=s; state.dayEnd=e;
-        // clamp bestaande blokken
+        // clamp bestaande blokken binnen het venster
         state.blocks.forEach(b=>{ b.start=Math.max(s,Math.min(e-SLOT,b.start)); b.end=Math.max(b.start+SLOT,Math.min(e,b.end)); });
-        close(); commit("Tijden aangepast");
+        close(); commit("Datum & tijd aangepast");
       }}
-    ]
+    ],
+    onBody:(root)=>{
+      function rebind(){
+        root.querySelectorAll('.manage-item').forEach(item=>{
+          const id=item.dataset.day; const d=state.days.find(x=>x.id===id);
+          item.querySelector('.js-date').onchange = e=>{ d.date=e.target.value; save(); renderDayBar(); };
+          const del=item.querySelector('.js-del');
+          if(del) del.onclick=()=>{
+            const cnt=state.blocks.filter(b=>b.dayId===id).length;
+            if(cnt && !confirm(`Deze dag heeft ${cnt} blok(ken). Dag en blokken verwijderen?`)) return;
+            state.blocks=state.blocks.filter(b=>b.dayId!==id);
+            state.days=state.days.filter(x=>x.id!==id);
+            if(state.activeDayId===id) state.activeDayId=state.days[0].id;
+            save(); root.querySelector('#daysWrap').innerHTML=daysHTML(); rebind(); renderDayBar();
+          };
+        });
+      }
+      root.querySelector('#addDayBtn').onclick=()=>{
+        const last=state.days[state.days.length-1];
+        state.days.push({id:uid(), date:nextDayISO(last && last.date)});
+        save(); root.querySelector('#daysWrap').innerHTML=daysHTML(); rebind(); renderDayBar();
+      };
+      rebind();
+    },
+    onClose:()=>render()
   });
 }
 
@@ -993,7 +1149,7 @@ function doExport(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   const base = (state.eventName||"event").replace(/[^\w\-]+/g,"_").toLowerCase();
-  a.href=url; a.download=`planning_${base}_${state.eventDate}.json`;
+  a.href=url; a.download=`planning_${base}_${state.days[0].date}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
   toast("Bestand opgeslagen — deel het met je collega's");
@@ -1144,8 +1300,7 @@ function toast(msg){
    TOPBAR BINDINGS
    ============================================================ */
 document.getElementById('eventName').addEventListener('input', e=>{ state.eventName=e.target.value; save(); });
-document.getElementById('eventDate').addEventListener('change', e=>{ state.eventDate=e.target.value; save(); });
-document.getElementById('btnTimes').onclick = openTimesModal;
+document.getElementById('btnEvent').onclick = openEventModal;
 document.getElementById('btnColleagues').onclick = openColleaguesModal;
 document.getElementById('btnTypes').onclick = openTypesModal;
 document.getElementById('btnShare').onclick = openShareModal;

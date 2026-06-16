@@ -6,13 +6,14 @@ Eén-bestand web-app om events met meerdere zalen te plannen. Opent op **Windows
 Dubbelklik op `index.html` (of sleep het naar je browser). Op telefoon: stuur het bestand naar jezelf en open het, of host het ergens (zie onderaan).
 
 ## Wat kan je?
+- **Event instellen** — bij een nieuwe planning kies je meteen **naam, datum en begin-/einduur** op het startscherm. Achteraf aanpassen via de knop `📅 Datum & tijd`.
+- **Meerdere dagen** — voeg dagen toe via de **dagbalk** onder de knoppenbalk (`＋ Dag`) of via `📅 Datum & tijd`. Klik een dag-tab om te wisselen; elk blok hoort bij één dag en beschikbaarheid wordt per dag berekend.
 - **Zalen toevoegen** — knop `＋ Zaal` rechts bovenaan het rooster. Klik `⋯` bij een zaal om de **naam en kleur** te wijzigen (kies uit stalen of een eigen kleur).
 - **Blokken plannen** — sleep in een zaalkolom van begintijd tot eindtijd (per kwartier). Er opent een venster om type, omschrijving, tijd en collega's te kiezen.
 - **Collega's per zaal** — klik het 👥-icoontje bij een zaalnaam om een vast team toe te wijzen.
 - **Zien wie vrij is** — bij het toevoegen van een blok toont de collega-lijst meteen wie *Vrij*, wie *Bezig* (en in welke zaal) en wie *team van deze zaal* is, op dat exacte tijdstip.
-- **Blok-types** — standaard: Technische assistentie, Plaatsing, Demontage, Transport. Eigen types toevoegen via `🏷️ Blok-types`.
-- **Aanpassen** (op desktop) — klik een blok om te bewerken, sleep het om te verplaatsen, sleep de boven-/onderrand om de tijd te wijzigen. Aanpassen hoeft niet op gsm.
-- **Tijdspanne** — begin- en einduur instellen via `🕗 Tijden`.
+- **Blok-types** — standaard: Technische assistentie, Plaatsing, Demontage, Transport, Laden, Lossen. Eigen types toevoegen via `🏷️ Blok-types`.
+- **Aanpassen** (op desktop) — klik een blok om te bewerken, sleep het om te verplaatsen, sleep de boven-/onderrand om de tijd te wijzigen. Aanpassen hoeft niet op gsm. Bij meerdere dagen kan je in het blok-venster ook de **dag** van het blok wijzigen.
 
 ## Opslaan & delen
 - Alles wordt **automatisch lokaal opgeslagen** in de browser.
