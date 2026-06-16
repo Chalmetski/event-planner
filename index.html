@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bm-teal:#007B83; --bm-teal-deep:#0A6269; --bm-cyan:#00CDE3; --bm-cyan-mid:#00AABB;
+  --bm-bg:#F0F5F4; --bm-surface:#FFFFFF; --bm-gray-50:#EAE8E7; --bm-gray-100:#D1D5D5; --bm-gray-200:#BCBBBC;
+  --bm-text-heading:#0A6269; --bm-text-body:#1F1F1F; --bm-text-muted:#5C6B6B; --bm-text-on-teal:#FFFFFF;
+  --bm-success:#0A6269; --bm-warning:#E8A33D; --bm-danger:#C8453F; --bm-info:#00AABB;
+  --bm-radius-sm:0.5rem; --bm-radius-md:1.5rem; --bm-radius-lg:2.25rem; --bm-radius-full:9999px;
+  --bm-shadow-subtle:0 0 1.5rem rgba(0,0,0,0.05);
+  --bm-shadow-soft:0 0 1.5rem rgba(0,0,0,0.125);
+  --bm-shadow-elevated:0 0 24px 0 rgba(0,0,0,0.12), 0 24px 24px 0 rgba(0,0,0,0.24);
+  --bm-shadow-modal:0 1.5rem 3rem rgba(0,0,0,0.5);
+  --bm-font:'Montserrat', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --bm-ease:cubic-bezier(0.16,1,0.3,1);
+  --hourH:64px;        /* hoogte van één uur in het rooster */
+  --gutterW:60px;      /* breedte tijd-kolom */
+  --roomW:200px;       /* breedte van een zaalkolom */
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bm-bg); color:var(--bm-text-body);
+  font-family:var(--bm-font); font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{color:var(--bm-text-heading); font-weight:700; letter-spacing:-0.01em; margin:0;}
+
+/* ---------- Layout ---------- */
+.app{display:flex; flex-direction:column; height:100vh; overflow:hidden;}
+
+/* Topbar */
+.topbar{
+  display:flex; align-items:center; gap:16px; padding:14px 20px;
+  background:var(--bm-surface); box-shadow:var(--bm-shadow-soft); z-index:20; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:12px; margin-right:8px;}
+.brand .dot{width:14px; height:14px; border-radius:50%; background:var(--bm-teal); box-shadow:0 0 0 4px rgba(0,123,131,0.15);}
+.brand .name{font-weight:700; color:var(--bm-text-heading); font-size:1.05rem; letter-spacing:-0.01em;}
+.event-meta{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.event-meta input[type=text]{min-width:200px; font-weight:600;}
+.spacer{flex:1 1 auto;}
+.toolbar{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+
+/* Inputs & buttons */
+input,select{
+  font-family:var(--bm-font); font-size:0.9rem; color:var(--bm-text-body);
+  background:var(--bm-surface); border:1px solid var(--bm-gray-50);
+  border-radius:var(--bm-radius-md); padding:0.5rem 0.9rem; outline:none;
+  transition:border-color .15s var(--bm-ease), box-shadow .15s var(--bm-ease);
+}
+input:focus,select:focus{border-color:var(--bm-teal); box-shadow:0 0 0 3px rgba(0,123,131,0.15);}
+label.fld{display:flex; flex-direction:column; gap:6px; font-size:0.8rem; font-weight:600; color:var(--bm-text-muted);}
+label.fld input,label.fld select{font-weight:500; color:var(--bm-text-body);}
+
+.btn{
+  display:inline-flex; align-items:center; gap:7px; cursor:pointer;
+  font-family:var(--bm-font); font-size:0.85rem; font-weight:600;
+  padding:0.55rem 1.1rem; border-radius:var(--bm-radius-md); border:1px solid transparent;
+  background:var(--bm-gray-50); color:var(--bm-text-heading);
+  transition:all .15s var(--bm-ease); white-space:nowrap;
+}
+.btn:hover{background:var(--bm-gray-100);}
+.btn-primary{background:var(--bm-teal); color:#fff;}
+.btn-primary:hover{background:var(--bm-teal-deep); box-shadow:var(--bm-shadow-soft);}
+.btn-outline{background:transparent; border:1px solid var(--bm-teal); color:var(--bm-teal);}
+.btn-outline:hover{background:var(--bm-bg);}
+.btn-ghost{background:transparent; color:var(--bm-text-heading);}
+.btn-ghost:hover{background:var(--bm-gray-50);}
+.btn-danger{background:transparent; color:var(--bm-danger); border:1px solid var(--bm-danger);}
+.btn-danger:hover{background:rgba(200,69,63,0.08);}
+.btn-sm{padding:0.35rem 0.7rem; font-size:0.78rem;}
+.btn .ic{width:16px; height:16px; display:inline-block;}
+.icon-btn{
+  width:34px; height:34px; padding:0; border-radius:50%; display:inline-flex;
+  align-items:center; justify-content:center; cursor:pointer; border:none; background:transparent; color:var(--bm-text-muted);
+  transition:all .15s var(--bm-ease);
+}
+.icon-btn:hover{background:var(--bm-gray-50); color:var(--bm-text-heading);}
+
+/* ---------- Planner grid ---------- */
+.planner-wrap{flex:1 1 auto; overflow:auto; position:relative; padding:0;}
+.planner{position:relative; min-width:max-content;}
+
+/* sticky header row with room names */
+.room-head-row{
+  position:sticky; top:0; z-index:12; display:flex; background:var(--bm-bg);
+  box-shadow:0 2px 12px rgba(0,0,0,0.06);
+}
+.corner{
+  width:var(--gutterW); flex:0 0 var(--gutterW); position:sticky; left:0; z-index:13;
+  background:var(--bm-bg);
+}
+.room-head{
+  width:var(--roomW); flex:0 0 var(--roomW); padding:10px 12px 12px; border-left:1px solid var(--bm-gray-50);
+  background:var(--bm-surface);
+}
+.room-head .rh-top{display:flex; align-items:center; gap:8px;}
+.room-head .rh-name{font-weight:700; color:var(--bm-text-heading); font-size:0.98rem; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.room-head .rh-team{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; min-height:4px;}
+.team-chip{
+  display:inline-flex; align-items:center; gap:5px; background:var(--bm-bg);
+  border-radius:var(--bm-radius-full); padding:2px 8px 2px 3px; font-size:0.72rem; font-weight:600; color:var(--bm-text-heading);
+}
+.add-room-head{
+  width:120px; flex:0 0 120px; display:flex; align-items:center; justify-content:center; border-left:1px dashed var(--bm-gray-100);
+}
+
+/* body: time gutter + columns */
+.grid-body{display:flex; position:relative;}
+.time-gutter{
+  width:var(--gutterW); flex:0 0 var(--gutterW); position:sticky; left:0; z-index:8; background:var(--bm-bg);
+}
+.time-label{
+  height:var(--hourH); position:relative; font-size:0.72rem; font-weight:600; color:var(--bm-text-muted);
+  text-align:right; padding-right:8px;
+}
+.time-label span{position:absolute; top:-7px; right:8px;}
+.columns{display:flex; position:relative;}
+.room-col{
+  width:var(--roomW); flex:0 0 var(--roomW); position:relative; border-left:1px solid var(--bm-gray-50);
+  background:
+    repeating-linear-gradient(to bottom,
+      transparent 0, transparent calc(var(--hourH)/4 - 1px),
+      var(--bm-gray-50) calc(var(--hourH)/4 - 1px), var(--bm-gray-50) calc(var(--hourH)/4));
+  background-color:var(--bm-surface);
+  cursor:crosshair; touch-action:pan-x pan-y;
+}
+.hour-line{position:absolute; left:0; right:0; height:1px; background:var(--bm-gray-100); pointer-events:none;}
+
+/* a block */
+.block{
+  position:absolute; left:4px; right:4px; border-radius:12px; padding:5px 8px; overflow:hidden;
+  color:#fff; cursor:pointer; box-shadow:var(--bm-shadow-subtle);
+  border-left:4px solid rgba(255,255,255,0.55);
+  display:flex; flex-direction:column; gap:2px; user-select:none;
+  transition:box-shadow .12s var(--bm-ease), transform .05s;
+}
+.block:hover{box-shadow:var(--bm-shadow-soft); filter:brightness(1.03);}
+.block .b-title{font-size:0.8rem; font-weight:700; line-height:1.15; overflow:hidden;}
+.block .b-time{font-size:0.68rem; font-weight:500; opacity:0.9;}
+.block .b-people{display:flex; flex-wrap:wrap; gap:3px; margin-top:auto;}
+.block.compact{padding:3px 7px;}
+.block.compact .b-time{display:none;}
+.b-avatar{
+  width:18px; height:18px; border-radius:50%; font-size:0.6rem; font-weight:700; color:#fff;
+  display:flex; align-items:center; justify-content:center; border:1.5px solid rgba(255,255,255,0.7);
+}
+.block .resize-h{position:absolute; left:0; right:0; height:8px; cursor:ns-resize;}
+.block .resize-h.top{top:0;} .block .resize-h.bottom{bottom:0;}
+
+/* drag ghost while creating */
+.ghost{
+  position:absolute; left:4px; right:4px; border-radius:12px; background:rgba(0,123,131,0.22);
+  border:2px dashed var(--bm-teal); pointer-events:none; z-index:30;
+  display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:var(--bm-teal-deep);
+}
+
+/* empty state */
+.empty-state{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; color:var(--bm-text-muted); gap:14px; padding:24px;
+}
+.empty-state h2{color:var(--bm-text-heading); font-size:1.4rem;}
+
+/* ---------- Modal ---------- */
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(10,98,105,0.42); backdrop-filter:blur(6px);
+  display:flex; align-items:center; justify-content:center; z-index:100; padding:16px;
+  animation:fade .15s var(--bm-ease);
+}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{
+  background:var(--bm-surface); border-radius:var(--bm-radius-lg); box-shadow:var(--bm-shadow-modal);
+  width:100%; max-width:540px; max-height:90vh; overflow:auto; padding:28px 28px 24px;
+  animation:pop .2s var(--bm-ease);
+}
+@keyframes pop{from{transform:translateY(12px) scale(.98); opacity:0}to{transform:none; opacity:1}}
+.modal-lg{max-width:640px;}
+.modal h2{font-size:1.35rem; margin-bottom:4px;}
+.modal .sub{color:var(--bm-text-muted); font-size:0.85rem; margin-bottom:18px;}
+.modal-row{display:flex; gap:12px; flex-wrap:wrap;}
+.modal-row > *{flex:1 1 0; min-width:120px;}
+.modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:22px; flex-wrap:wrap;}
+.modal-actions .left{margin-right:auto;}
+.field-group{margin-bottom:16px;}
+.field-group > .lbl{font-size:0.8rem; font-weight:700; color:var(--bm-text-muted); margin-bottom:8px; display:block;}
+
+/* type picker */
+.type-grid{display:flex; flex-wrap:wrap; gap:8px;}
+.type-opt{
+  display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:var(--bm-radius-md);
+  border:2px solid var(--bm-gray-50); cursor:pointer; font-weight:600; font-size:0.85rem; background:var(--bm-surface);
+  transition:all .12s var(--bm-ease);
+}
+.type-opt .swatch{width:14px; height:14px; border-radius:4px;}
+.type-opt.sel{border-color:var(--bm-teal); background:var(--bm-bg);}
+
+/* people picker (availability) */
+.people-list{display:flex; flex-direction:column; gap:6px; max-height:240px; overflow:auto; margin-top:4px;}
+.person-row{
+  display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--bm-radius-md);
+  border:1px solid var(--bm-gray-50); cursor:pointer; transition:all .12s var(--bm-ease);
+}
+.person-row:hover{background:var(--bm-bg);}
+.person-row.sel{border-color:var(--bm-teal); background:var(--bm-bg);}
+.person-row .check{
+  width:20px; height:20px; border-radius:6px; border:2px solid var(--bm-gray-100); flex:0 0 20px;
+  display:flex; align-items:center; justify-content:center;
+}
+.person-row.sel .check{background:var(--bm-teal); border-color:var(--bm-teal); color:#fff;}
+.person-row .pname{font-weight:600; flex:1; color:var(--bm-text-body); display:flex; align-items:center; gap:8px;}
+.status{font-size:0.72rem; font-weight:700; padding:2px 9px; border-radius:var(--bm-radius-full); white-space:nowrap;}
+.status.free{background:rgba(10,98,105,0.12); color:var(--bm-teal-deep);}
+.status.busy{background:rgba(232,163,61,0.16); color:#a86f1e;}
+.status.room{background:rgba(0,170,187,0.14); color:#067a87;}
+
+/* manage lists */
+.manage-list{display:flex; flex-direction:column; gap:8px; margin:8px 0 4px;}
+.manage-item{
+  display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:var(--bm-radius-md);
+  border:1px solid var(--bm-gray-50);
+}
+.manage-item .grow{flex:1; border:none; background:transparent; padding:4px 0; font-weight:600;}
+.manage-item .grow:focus{box-shadow:none;}
+.swatch-btn{width:26px; height:26px; border-radius:8px; border:2px solid var(--bm-gray-50); cursor:pointer; flex:0 0 26px; padding:0;}
+.room-swatches{display:flex; flex-wrap:wrap; gap:8px;}
+.room-swatch{width:30px; height:30px; border-radius:8px; border:2px solid transparent; cursor:pointer; padding:0; box-shadow:0 0 0 1px rgba(0,0,0,0.06);}
+.room-swatch.sel{border-color:#fff; box-shadow:0 0 0 2px var(--bm-teal);}
+input[type=color]{border:1px solid var(--bm-gray-50); border-radius:10px; background:#fff;}
+.color-dot{width:14px;height:14px;border-radius:50%;flex:0 0 14px;}
+.room-color-dot{width:12px;height:12px;border-radius:50%;flex:0 0 12px;}
+
+.hint{font-size:0.78rem; color:var(--bm-text-muted); margin-top:6px;}
+.warn-box{background:rgba(232,163,61,0.14); color:#8a5a13; border-radius:var(--bm-radius-md); padding:12px 14px; font-size:0.82rem; font-weight:600; margin-bottom:16px; line-height:1.45;}
+.qr-wrap{display:flex; justify-content:center; padding:8px 0 18px;}
+.qr-wrap img{border:8px solid #fff; border-radius:12px; box-shadow:var(--bm-shadow-soft); image-rendering:pixelated;}
+.link-row{display:flex; gap:8px;}
+.link-row input{flex:1; font-size:0.8rem; color:var(--bm-text-muted);}
+.share-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+.share-actions .btn{flex:1; justify-content:center; min-width:140px;}
+.legend{display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
+.legend .li{display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; font-weight:600; color:var(--bm-text-muted);}
+.legend .sw{width:12px; height:12px; border-radius:4px;}
+
+.toast{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%); z-index:200;
+  background:var(--bm-teal-deep); color:#fff; padding:11px 20px; border-radius:var(--bm-radius-full);
+  font-size:0.85rem; font-weight:600; box-shadow:var(--bm-shadow-soft); opacity:0; pointer-events:none;
+  transition:opacity .2s, transform .2s;
+}
+.toast.show{opacity:1; transform:translateX(-50%) translateY(-4px);}
+
+/* responsive */
+@media (max-width:640px){
+  :root{--roomW:160px; --gutterW:48px;}
+  .topbar{padding:10px 12px; gap:10px;}
+  .event-meta input[type=text]{min-width:140px;}
+  .hide-mobile{display:none !important;}
+  .modal{padding:20px 18px;}
+}
+
+@media print{
+  .topbar,.add-room-head,.empty-state .btn{display:none !important;}
+  .planner-wrap{overflow:visible;}
+  body{background:#fff;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span><span class="name">Event Planner</span></div>
+    <div class="event-meta">
+      <input type="text" id="eventName" placeholder="Naam van het event" />
+      <input type="date" id="eventDate" class="hide-mobile" />
+    </div>
+    <div class="spacer"></div>
+    <div class="toolbar">
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnTimes">🕗 Tijden</button>
+      <button class="btn btn-ghost btn-sm" id="btnColleagues">👥 Collega's</button>
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnTypes">🏷️ Blok-types</button>
+      <button class="btn btn-primary btn-sm" id="btnShare">🔗 Delen</button>
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnImport">📂 Bestand openen</button>
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnExport">💾 Bestand</button>
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnPrint">🖨️</button>
+      <button class="btn btn-ghost btn-sm hide-mobile" id="btnNew" title="Nieuwe planning">＋ Nieuw</button>
+    </div>
+  </div>
+
+  <!-- Planner -->
+  <div class="planner-wrap" id="plannerWrap">
+    <div class="planner" id="planner"></div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script src="lz-string.min.js"></script>
+<script src="qrcode.min.js"></script>
+<script>
+"use strict";
+
+/* ============================================================
+   Event Planner — single-file app
+   Data: localStorage (auto-save) + JSON export/import om te delen
+   ============================================================ */
+
+const SLOT = 15;                 // minuten per slot
+const STORE_KEY = "eventplanner.v1";
+
+const AVATAR_COLORS = ["#007B83","#00AABB","#E8A33D","#6C7AE0","#C8453F","#0A6269","#D2698F","#3C8C5A","#B5762B","#5C6B6B"];
+const ROOM_COLORS   = ["#007B83","#00AABB","#6C7AE0","#E8A33D","#C8453F","#3C8C5A","#D2698F","#0A6269","#B5762B","#5C6B6B"];
+
+function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtTime(min){ return pad(Math.floor(min/60))+":"+pad(min%60); }
+function todayISO(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function initials(name){
+  const p=name.trim().split(/\s+/);
+  if(p.length===1) return p[0].slice(0,2).toUpperCase();
+  return (p[0][0]+p[p.length-1][0]).toUpperCase();
+}
+
+/* ---------- default state ---------- */
+function defaultState(){
+  return {
+    eventName:"",
+    eventDate: todayISO(),
+    dayStart: 8*60,
+    dayEnd: 24*60,
+    rooms: [],
+    colleagues: [],
+    types: [
+      {id:"t_tech",  name:"Technische assistentie", color:"#007B83", builtin:true},
+      {id:"t_place", name:"Plaatsing",              color:"#00AABB", builtin:true},
+      {id:"t_demo",  name:"Demontage",              color:"#E8A33D", builtin:true},
+      {id:"t_trans", name:"Transport",              color:"#6C7AE0", builtin:true},
+    ],
+    blocks: []
+  };
+}
+
+let state = load() || defaultState();
+
+/* ---------- persistence ---------- */
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){ console.warn("save failed", e); }
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    return migrate(s);
+  }catch(e){ return null; }
+}
+function migrate(s){
+  // veilige defaults voor ontbrekende velden
+  const d = defaultState();
+  s.eventName = s.eventName ?? "";
+  s.eventDate = s.eventDate ?? d.eventDate;
+  s.dayStart  = s.dayStart  ?? d.dayStart;
+  s.dayEnd    = s.dayEnd    ?? d.dayEnd;
+  s.rooms     = Array.isArray(s.rooms) ? s.rooms : [];
+  s.colleagues= Array.isArray(s.colleagues) ? s.colleagues : [];
+  s.types     = Array.isArray(s.types) && s.types.length ? s.types : d.types;
+  s.blocks    = Array.isArray(s.blocks) ? s.blocks : [];
+  s.rooms.forEach((r,i)=>{ if(!Array.isArray(r.colleagueIds)) r.colleagueIds=[]; if(!r.color) r.color=ROOM_COLORS[i%ROOM_COLORS.length]; });
+  s.blocks.forEach(b=>{ if(!Array.isArray(b.colleagueIds)) b.colleagueIds=[]; });
+  return s;
+}
+
+/* ---------- helpers ---------- */
+function typeById(id){ return state.types.find(t=>t.id===id) || state.types[0]; }
+function colById(id){ return state.colleagues.find(c=>c.id===id); }
+function roomById(id){ return state.rooms.find(r=>r.id===id); }
+
+// is een collega bezig in [start,end)?  geeft het conflicterende blok terug of null
+function busyBlock(colleagueId, start, end, excludeBlockId){
+  return state.blocks.find(b =>
+    b.id !== excludeBlockId &&
+    b.colleagueIds.includes(colleagueId) &&
+    b.start < end && b.end > start
+  ) || null;
+}
+
+function commit(msg){
+  save();
+  render();
+  if(msg) toast(msg);
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const planner = document.getElementById('planner');
+const wrap = document.getElementById('plannerWrap');
+
+function render(){
+  // topbar fields
+  document.getElementById('eventName').value = state.eventName;
+  document.getElementById('eventDate').value = state.eventDate;
+
+  if(state.rooms.length === 0){
+    planner.style.minHeight = "70vh";
+    planner.innerHTML = `
+      <div class="empty-state">
+        <h2>Plan je event</h2>
+        <p style="max-width:420px">Voeg zalen toe en sleep blokken in de tijdlijn om te plannen wie waar wat doet.</p>
+        <button class="btn btn-primary" id="esAddRoom">＋ Eerste zaal toevoegen</button>
+        <button class="btn btn-ghost btn-sm" id="esAddCol">Eerst collega's toevoegen</button>
+      </div>`;
+    planner.querySelector('#esAddRoom').onclick = ()=> addRoom();
+    planner.querySelector('#esAddCol').onclick = ()=> openColleaguesModal();
+    return;
+  }
+
+  const hours = (state.dayEnd - state.dayStart)/60;
+  const bodyH = hours * 64; // hourH px
+
+  let html = `<div class="room-head-row"><div class="corner"></div>`;
+  state.rooms.forEach(r=>{
+    const team = r.colleagueIds.map(cid=>{
+      const c = colById(cid); if(!c) return "";
+      return `<span class="team-chip"><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</span>`;
+    }).join("");
+    html += `
+      <div class="room-head" data-room="${r.id}" style="border-top:3px solid ${r.color}">
+        <div class="rh-top">
+          <span class="room-color-dot" style="background:${r.color}"></span>
+          <span class="rh-name" title="${esc(r.name)}">${esc(r.name)}</span>
+          <button class="icon-btn js-room-team" data-room="${r.id}" title="Team toewijzen">👥</button>
+          <button class="icon-btn js-room-menu" data-room="${r.id}" title="Zaal bewerken">⋯</button>
+        </div>
+        <div class="rh-team">${team || '<span style="font-size:.72rem;color:var(--bm-gray-200)">Geen team</span>'}</div>
+      </div>`;
+  });
+  html += `<div class="add-room-head"><button class="btn btn-outline btn-sm js-add-room">＋ Zaal</button></div>`;
+  html += `</div>`; // room-head-row
+
+  // body
+  html += `<div class="grid-body"><div class="time-gutter">`;
+  for(let m=state.dayStart; m<state.dayEnd; m+=60){
+    html += `<div class="time-label"><span>${fmtTime(m)}</span></div>`;
+  }
+  html += `</div><div class="columns" style="height:${bodyH}px">`;
+
+  state.rooms.forEach(r=>{
+    html += `<div class="room-col" data-room="${r.id}" style="height:${bodyH}px; box-shadow:inset 3px 0 0 -1px ${hexA(r.color,0.5)}">`;
+    // hour lines
+    for(let h=0; h<=hours; h++){
+      html += `<div class="hour-line" style="top:${h*64}px"></div>`;
+    }
+    // blocks
+    state.blocks.filter(b=>b.roomId===r.id).forEach(b=>{
+      html += blockHTML(b);
+    });
+    html += `</div>`;
+  });
+  html += `</div></div>`; // columns, grid-body
+
+  planner.style.minHeight = "";
+  planner.innerHTML = html;
+
+  bindGridEvents();
+}
+
+function blockHTML(b){
+  const t = typeById(b.typeId);
+  const top = (b.start - state.dayStart)/SLOT * (64/4);
+  const h   = (b.end - b.start)/SLOT * (64/4);
+  const compact = h < 44 ? "compact" : "";
+  const title = b.label && b.label.trim() ? b.label : t.name;
+  const people = b.colleagueIds.map(cid=>{
+    const c = colById(cid); if(!c) return "";
+    return `<span class="b-avatar" style="background:${c.color}" title="${esc(c.name)}">${initials(c.name)}</span>`;
+  }).join("");
+  return `
+    <div class="block ${compact}" data-block="${b.id}" style="top:${top}px; height:${h}px; background:${t.color}">
+      <div class="resize-h top" data-resize="top"></div>
+      <div class="b-title">${esc(title)}</div>
+      <div class="b-time">${fmtTime(b.start)}–${fmtTime(b.end)} · ${esc(t.name)}</div>
+      <div class="b-people">${people}</div>
+      <div class="resize-h bottom" data-resize="bottom"></div>
+    </div>`;
+}
+
+function esc(s){ return String(s??"").replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hexA(hex,a){ const h=hex.replace('#',''); const n=h.length===3?h.split('').map(x=>x+x).join(''):h;
+  const r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);
+  return `rgba(${r},${g},${b},${a})`; }
+
+/* ============================================================
+   GRID INTERACTION (create / move / resize)
+   ============================================================ */
+const HOUR_H = 64;
+const SLOT_H = HOUR_H/4; // px per 15 min
+
+function yToMin(col, clientY){
+  const rect = col.getBoundingClientRect();
+  let y = clientY - rect.top;
+  let min = state.dayStart + Math.round(y / SLOT_H) * SLOT;
+  return Math.max(state.dayStart, Math.min(state.dayEnd, min));
+}
+
+let drag = null; // {mode, roomId, blockId, startMin, ghost, origStart, origEnd, grabOffset}
+
+function bindGridEvents(){
+  // add room buttons
+  planner.querySelectorAll('.js-add-room').forEach(el=> el.onclick = ()=> addRoom());
+  planner.querySelectorAll('.js-room-menu').forEach(el=> el.onclick = (e)=>{ e.stopPropagation(); openRoomMenu(el.dataset.room); });
+  planner.querySelectorAll('.js-room-team').forEach(el=> el.onclick = (e)=>{ e.stopPropagation(); openRoomTeamModal(el.dataset.room); });
+
+  // pointer interactions on columns
+  planner.querySelectorAll('.room-col').forEach(col=>{
+    col.addEventListener('pointerdown', onPointerDown);
+  });
+}
+
+function onPointerDown(e){
+  if(e.button!==undefined && e.button!==0) return;
+  const col = e.currentTarget;
+  const roomId = col.dataset.room;
+  const blockEl = e.target.closest('.block');
+
+  if(blockEl){
+    const blockId = blockEl.dataset.block;
+    const b = state.blocks.find(x=>x.id===blockId);
+    const resize = e.target.dataset.resize;
+    col.setPointerCapture(e.pointerId);
+    if(resize){
+      drag = {mode:'resize', edge:resize, roomId, blockId, origStart:b.start, origEnd:b.end, moved:false, col};
+    }else{
+      const grab = yToMin(col, e.clientY) - b.start;
+      drag = {mode:'move', roomId, blockId, origStart:b.start, origEnd:b.end, grab, moved:false, col};
+    }
+    e.preventDefault();
+    return;
+  }
+
+  // create
+  col.setPointerCapture(e.pointerId);
+  const startMin = yToMin(col, e.clientY);
+  const ghost = document.createElement('div');
+  ghost.className='ghost';
+  col.appendChild(ghost);
+  drag = {mode:'create', roomId, anchor:startMin, cur:startMin, ghost, moved:false, col};
+  updateGhost();
+  e.preventDefault();
+}
+
+function onPointerMove(e){
+  if(!drag) return;
+  const min = yToMin(drag.col, e.clientY);
+  drag.moved = true;
+  if(drag.mode==='create'){
+    drag.cur = min;
+    updateGhost();
+  }else if(drag.mode==='move'){
+    const b = state.blocks.find(x=>x.id===drag.blockId);
+    const dur = drag.origEnd - drag.origStart;
+    let ns = min - drag.grab;
+    ns = Math.max(state.dayStart, Math.min(state.dayEnd-dur, Math.round((ns-state.dayStart)/SLOT)*SLOT+state.dayStart));
+    b.start = ns; b.end = ns+dur;
+    liveUpdateBlock(b);
+  }else if(drag.mode==='resize'){
+    const b = state.blocks.find(x=>x.id===drag.blockId);
+    if(drag.edge==='top'){
+      b.start = Math.min(b.end-SLOT, min);
+    }else{
+      b.end = Math.max(b.start+SLOT, min);
+    }
+    liveUpdateBlock(b);
+  }
+}
+
+function liveUpdateBlock(b){
+  const el = planner.querySelector(`.block[data-block="${b.id}"]`);
+  if(!el) return;
+  const top = (b.start-state.dayStart)/SLOT*SLOT_H;
+  const h = (b.end-b.start)/SLOT*SLOT_H;
+  el.style.top = top+"px"; el.style.height = h+"px";
+  el.querySelector('.b-time').textContent = `${fmtTime(b.start)}–${fmtTime(b.end)} · ${typeById(b.typeId).name}`;
+}
+
+function onPointerUp(e){
+  if(!drag) return;
+  const d = drag; drag = null;
+  try{ d.col.releasePointerCapture(e.pointerId); }catch(_){}
+
+  if(d.mode==='create'){
+    if(d.ghost) d.ghost.remove();
+    let s = Math.min(d.anchor, d.cur), en = Math.max(d.anchor, d.cur);
+    if(en - s < SLOT) en = s + SLOT; // minimum 15 min ook bij gewone klik
+    openBlockModal({roomId:d.roomId, start:s, end:en});
+  }else if(d.mode==='move' || d.mode==='resize'){
+    if(d.moved){
+      save();
+      render();
+    }else{
+      // gewone klik op blok → bewerken
+      openBlockModal(state.blocks.find(x=>x.id===d.blockId));
+    }
+  }
+}
+
+function updateGhost(){
+  if(!drag || drag.mode!=='create') return;
+  let s = Math.min(drag.anchor, drag.cur), en = Math.max(drag.anchor, drag.cur);
+  if(en===s) en = s+SLOT;
+  const top=(s-state.dayStart)/SLOT*SLOT_H, h=(en-s)/SLOT*SLOT_H;
+  drag.ghost.style.top=top+"px"; drag.ghost.style.height=h+"px";
+  drag.ghost.textContent = `${fmtTime(s)}–${fmtTime(en)}`;
+}
+
+document.addEventListener('pointermove', onPointerMove);
+document.addEventListener('pointerup', onPointerUp);
+
+/* ============================================================
+   ROOMS
+   ============================================================ */
+function addRoom(){
+  const n = state.rooms.length+1;
+  state.rooms.push({id:uid(), name:"Zaal "+n, color:ROOM_COLORS[(n-1)%ROOM_COLORS.length], colleagueIds:[]});
+  commit();
+}
+function openRoomMenu(roomId){
+  const r = roomById(roomId);
+  const swatches = ROOM_COLORS.map(c=>`<button class="room-swatch" data-c="${c}" style="background:${c}" title="${c}"></button>`).join("");
+  modal({
+    title:"Zaal bewerken",
+    body:`
+      <div class="field-group">
+        <label class="fld">Naam van de zaal
+          <input type="text" id="rmName" value="${esc(r.name)}" />
+        </label>
+      </div>
+      <div class="field-group">
+        <span class="lbl">Kleur van de zaal</span>
+        <div class="room-swatches" id="rmSwatches">${swatches}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+          <input type="color" id="rmColor" value="${r.color}" style="width:46px;height:38px;padding:2px;cursor:pointer">
+          <span class="hint" style="margin:0">…of kies een eigen kleur</span>
+        </div>
+      </div>`,
+    actions:[
+      {label:"Verwijderen", cls:"btn-danger left", onClick:(close)=>{
+        if(confirm(`Zaal "${r.name}" en alle blokken erin verwijderen?`)){
+          state.blocks = state.blocks.filter(b=>b.roomId!==roomId);
+          state.rooms = state.rooms.filter(x=>x.id!==roomId);
+          close(); commit("Zaal verwijderd");
+        }
+      }},
+      {label:"Annuleren", cls:"btn-ghost", onClick:(close)=>close()},
+      {label:"Opslaan", cls:"btn-primary", onClick:(close)=>{
+        const v = document.getElementById('rmName').value.trim();
+        if(v) r.name=v;
+        r.color = document.getElementById('rmColor').value;
+        close(); commit();
+      }}
+    ],
+    onBody:(root)=>{
+      const colorInput = root.querySelector('#rmColor');
+      root.querySelectorAll('.room-swatch').forEach(sw=>{
+        sw.onclick = ()=>{ colorInput.value = sw.dataset.c; markSel(); };
+      });
+      function markSel(){
+        root.querySelectorAll('.room-swatch').forEach(s=>s.classList.toggle('sel', s.dataset.c.toLowerCase()===colorInput.value.toLowerCase()));
+      }
+      colorInput.oninput = markSel; markSel();
+    }
+  });
+  setTimeout(()=>document.getElementById('rmName')?.focus(),50);
+}
+
+function openRoomTeamModal(roomId){
+  const r = roomById(roomId);
+  if(state.colleagues.length===0){
+    return modal({
+      title:"Geen collega's",
+      body:`<p class="sub">Voeg eerst collega's toe voor je een team aan een zaal toewijst.</p>`,
+      actions:[
+        {label:"Sluiten", cls:"btn-ghost", onClick:c=>c()},
+        {label:"Collega's beheren", cls:"btn-primary", onClick:c=>{c(); openColleaguesModal();}}
+      ]
+    });
+  }
+  const rows = state.colleagues.map(c=>{
+    const sel = r.colleagueIds.includes(c.id);
+    return `<div class="person-row ${sel?'sel':''}" data-col="${c.id}">
+      <span class="check">${sel?'✓':''}</span>
+      <span class="pname"><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</span>
+    </div>`;
+  }).join("");
+  modal({
+    title:"Team voor "+esc(r.name),
+    sub:"Wie hoort standaard bij deze zaal? (los van losse blokken)",
+    body:`<div class="people-list" id="teamList">${rows}</div>`,
+    actions:[{label:"Klaar", cls:"btn-primary", onClick:c=>c()}],
+    onBody:(root)=>{
+      root.querySelectorAll('.person-row').forEach(row=>{
+        row.onclick=()=>{
+          const id=row.dataset.col;
+          const i=r.colleagueIds.indexOf(id);
+          if(i>=0){ r.colleagueIds.splice(i,1); row.classList.remove('sel'); row.querySelector('.check').textContent=''; }
+          else{ r.colleagueIds.push(id); row.classList.add('sel'); row.querySelector('.check').textContent='✓'; }
+          save();
+        };
+      });
+    },
+    onClose:()=>render()
+  });
+}
+
+/* ============================================================
+   BLOCK MODAL  (create + edit, met beschikbaarheid)
+   ============================================================ */
+function openBlockModal(data){
+  const isEdit = !!data.id;
+  const block = isEdit ? data : {
+    id:null, roomId:data.roomId, typeId:state.types[0].id,
+    label:"", start:data.start, end:data.end, colleagueIds:[]
+  };
+  // werk op een kopie
+  const draft = JSON.parse(JSON.stringify(block));
+  const room = roomById(draft.roomId);
+  // suggestie: team van de zaal voorselecteren bij nieuw blok
+  if(!isEdit && room && room.colleagueIds.length && draft.colleagueIds.length===0){
+    draft.colleagueIds = room.colleagueIds.filter(cid=>!busyBlock(cid, draft.start, draft.end, null));
+  }
+
+  const timeOptions = (selMin)=>{
+    let o="";
+    for(let m=state.dayStart; m<=state.dayEnd; m+=SLOT){
+      o+=`<option value="${m}" ${m===selMin?'selected':''}>${fmtTime(m)}</option>`;
+    }
+    return o;
+  };
+
+  const typeGrid = state.types.map(t=>`
+    <div class="type-opt ${t.id===draft.typeId?'sel':''}" data-type="${t.id}">
+      <span class="swatch" style="background:${t.color}"></span>${esc(t.name)}
+    </div>`).join("");
+
+  modal({
+    cls:"modal-lg",
+    title: isEdit ? "Blok bewerken" : "Nieuw blok",
+    sub: room ? esc(room.name) : "",
+    body:`
+      <div class="field-group">
+        <span class="lbl">Type werk</span>
+        <div class="type-grid" id="typeGrid">${typeGrid}</div>
+      </div>
+      <div class="field-group">
+        <label class="fld">Omschrijving (optioneel)
+          <input type="text" id="bkLabel" placeholder="bv. Geluidscheck hoofdpodium" value="${esc(draft.label)}" />
+        </label>
+      </div>
+      <div class="modal-row field-group">
+        <label class="fld">Van
+          <select id="bkStart">${timeOptions(draft.start)}</select>
+        </label>
+        <label class="fld">Tot
+          <select id="bkEnd">${timeOptions(draft.end)}</select>
+        </label>
+        <label class="fld">Zaal
+          <select id="bkRoom">${state.rooms.map(r=>`<option value="${r.id}" ${r.id===draft.roomId?'selected':''}>${esc(r.name)}</option>`).join("")}</select>
+        </label>
+      </div>
+      <div class="field-group">
+        <span class="lbl">Collega's toewijzen — <span style="color:var(--bm-text-muted);font-weight:600">wie is vrij op dit moment?</span></span>
+        <div class="people-list" id="peopleList"></div>
+        <div class="hint" id="noColHint" style="display:none">Nog geen collega's. Voeg ze toe via 👥 Collega's bovenaan.</div>
+      </div>
+    `,
+    actions:[
+      ...(isEdit ? [{label:"Verwijderen", cls:"btn-danger left", onClick:(close)=>{
+        state.blocks = state.blocks.filter(b=>b.id!==draft.id);
+        close(); commit("Blok verwijderd");
+      }}] : []),
+      {label:"Annuleren", cls:"btn-ghost", onClick:close=>close()},
+      {label: isEdit?"Opslaan":"Toevoegen", cls:"btn-primary", onClick:(close)=>{
+        if(draft.end<=draft.start){ toast("Eindtijd moet na de starttijd liggen"); return; }
+        if(isEdit){
+          const b = state.blocks.find(x=>x.id===draft.id);
+          Object.assign(b, {typeId:draft.typeId, label:draft.label, start:draft.start, end:draft.end, roomId:draft.roomId, colleagueIds:draft.colleagueIds});
+        }else{
+          state.blocks.push({...draft, id:uid()});
+        }
+        close(); commit(isEdit?"Blok bijgewerkt":"Blok toegevoegd");
+      }}
+    ],
+    onBody:(root)=>{
+      // type select
+      root.querySelectorAll('.type-opt').forEach(el=>{
+        el.onclick=()=>{
+          draft.typeId = el.dataset.type;
+          root.querySelectorAll('.type-opt').forEach(x=>x.classList.toggle('sel', x===el));
+        };
+      });
+      root.querySelector('#bkLabel').oninput = e=> draft.label = e.target.value;
+      const sS=root.querySelector('#bkStart'), sE=root.querySelector('#bkEnd'), sR=root.querySelector('#bkRoom');
+      sS.onchange=()=>{ draft.start=+sS.value; if(draft.end<=draft.start){ draft.end=draft.start+SLOT; syncEnd(); } renderPeople(); };
+      sE.onchange=()=>{ draft.end=+sE.value; renderPeople(); };
+      sR.onchange=()=>{ draft.roomId=sR.value; };
+      function syncEnd(){ sE.value=draft.end; }
+
+      function renderPeople(){
+        const list = root.querySelector('#peopleList');
+        const hint = root.querySelector('#noColHint');
+        if(state.colleagues.length===0){ list.innerHTML=""; hint.style.display='block'; return; }
+        hint.style.display='none';
+        list.innerHTML = state.colleagues.map(c=>{
+          const sel = draft.colleagueIds.includes(c.id);
+          const conflict = busyBlock(c.id, draft.start, draft.end, draft.id);
+          const inRoom = room && room.colleagueIds.includes(c.id);
+          let badge;
+          if(conflict){
+            const cr = roomById(conflict.roomId);
+            badge = `<span class="status busy">Bezig · ${esc((cr&&cr.name)||'')}</span>`;
+          }else if(inRoom){
+            badge = `<span class="status room">Team van deze zaal</span>`;
+          }else{
+            badge = `<span class="status free">Vrij</span>`;
+          }
+          return `<div class="person-row ${sel?'sel':''}" data-col="${c.id}">
+            <span class="check">${sel?'✓':''}</span>
+            <span class="pname"><span class="color-dot" style="background:${c.color}"></span>${esc(c.name)}</span>
+            ${badge}
+          </div>`;
+        }).join("");
+        list.querySelectorAll('.person-row').forEach(row=>{
+          row.onclick=()=>{
+            const id=row.dataset.col;
+            const i=draft.colleagueIds.indexOf(id);
+            if(i>=0) draft.colleagueIds.splice(i,1); else draft.colleagueIds.push(id);
+            renderPeople();
+          };
+        });
+      }
+      renderPeople();
+    }
+  });
+}
+
+/* ============================================================
+   COLLEAGUES MANAGER
+   ============================================================ */
+function openColleaguesModal(){
+  function rowsHTML(){
+    if(state.colleagues.length===0) return `<p class="hint">Nog geen collega's toegevoegd.</p>`;
+    return `<div class="manage-list">`+ state.colleagues.map(c=>`
+      <div class="manage-item" data-col="${c.id}">
+        <button class="swatch-btn js-color" style="background:${c.color}" title="Kleur"></button>
+        <input class="grow js-name" value="${esc(c.name)}" />
+        <button class="icon-btn js-del" title="Verwijderen">🗑️</button>
+      </div>`).join("") + `</div>`;
+  }
+  modal({
+    title:"Collega's",
+    sub:"Iedereen die ingezet kan worden op het event.",
+    body:`<div id="colWrap">${rowsHTML()}</div>
+          <button class="btn btn-outline btn-sm" id="addCol" style="margin-top:10px">＋ Collega toevoegen</button>`,
+    actions:[{label:"Klaar", cls:"btn-primary", onClick:c=>c()}],
+    onBody:(root)=>{
+      function rebind(){
+        root.querySelectorAll('.manage-item').forEach(item=>{
+          const id=item.dataset.col; const c=colById(id);
+          item.querySelector('.js-name').oninput = e=>{ c.name=e.target.value; save(); };
+          item.querySelector('.js-color').onclick = ()=>{
+            const i=AVATAR_COLORS.indexOf(c.color);
+            c.color = AVATAR_COLORS[(i+1)%AVATAR_COLORS.length];
+            item.querySelector('.js-color').style.background=c.color;
+            save();
+          };
+          item.querySelector('.js-del').onclick = ()=>{
+            state.colleagues = state.colleagues.filter(x=>x.id!==id);
+            state.rooms.forEach(r=> r.colleagueIds = r.colleagueIds.filter(x=>x!==id));
+            state.blocks.forEach(b=> b.colleagueIds = b.colleagueIds.filter(x=>x!==id));
+            save(); root.querySelector('#colWrap').innerHTML=rowsHTML(); rebind();
+          };
+        });
+      }
+      root.querySelector('#addCol').onclick = ()=>{
+        const color = AVATAR_COLORS[state.colleagues.length % AVATAR_COLORS.length];
+        state.colleagues.push({id:uid(), name:"Nieuwe collega", color});
+        save();
+        root.querySelector('#colWrap').innerHTML=rowsHTML(); rebind();
+        const inputs=root.querySelectorAll('.js-name'); const last=inputs[inputs.length-1];
+        last.focus(); last.select();
+      };
+      rebind();
+    },
+    onClose:()=>render()
+  });
+}
+
+/* ============================================================
+   TYPES MANAGER
+   ============================================================ */
+function openTypesModal(){
+  function rowsHTML(){
+    return `<div class="manage-list">`+ state.types.map(t=>`
+      <div class="manage-item" data-type="${t.id}">
+        <button class="swatch-btn js-color" style="background:${t.color}" title="Kleur"></button>
+        <input class="grow js-name" value="${esc(t.name)}" ${t.builtin?'':''}/>
+        ${t.builtin?'<span class="status room">standaard</span>':'<button class="icon-btn js-del" title="Verwijderen">🗑️</button>'}
+      </div>`).join("") + `</div>`;
+  }
+  modal({
+    title:"Blok-types",
+    sub:"Standaardtypes plus je eigen toevoegingen.",
+    body:`<div id="typeWrap">${rowsHTML()}</div>
+          <button class="btn btn-outline btn-sm" id="addType" style="margin-top:10px">＋ Eigen type toevoegen</button>`,
+    actions:[{label:"Klaar", cls:"btn-primary", onClick:c=>c()}],
+    onBody:(root)=>{
+      function rebind(){
+        root.querySelectorAll('.manage-item').forEach(item=>{
+          const id=item.dataset.type; const t=typeById(id);
+          item.querySelector('.js-name').oninput = e=>{ t.name=e.target.value; save(); };
+          item.querySelector('.js-color').onclick = ()=>{
+            const i=AVATAR_COLORS.indexOf(t.color);
+            t.color = AVATAR_COLORS[(i+1)%AVATAR_COLORS.length];
+            item.querySelector('.js-color').style.background=t.color; save();
+          };
+          const del=item.querySelector('.js-del');
+          if(del) del.onclick=()=>{
+            if(state.blocks.some(b=>b.typeId===id)){
+              if(!confirm("Er zijn blokken met dit type. Toch verwijderen? Ze krijgen het eerste type.")) return;
+              state.blocks.forEach(b=>{ if(b.typeId===id) b.typeId=state.types.find(x=>x.id!==id).id; });
+            }
+            state.types = state.types.filter(x=>x.id!==id);
+            save(); root.querySelector('#typeWrap').innerHTML=rowsHTML(); rebind();
+          };
+        });
+      }
+      root.querySelector('#addType').onclick=()=>{
+        const color = AVATAR_COLORS[state.types.length % AVATAR_COLORS.length];
+        state.types.push({id:uid(), name:"Nieuw type", color, builtin:false});
+        save(); root.querySelector('#typeWrap').innerHTML=rowsHTML(); rebind();
+        const inputs=root.querySelectorAll('.js-name'); const last=inputs[inputs.length-1];
+        last.focus(); last.select();
+      };
+      rebind();
+    },
+    onClose:()=>render()
+  });
+}
+
+/* ============================================================
+   TIMES MODAL
+   ============================================================ */
+function openTimesModal(){
+  const opt=(sel)=>{let o="";for(let m=0;m<=24*60;m+=60){o+=`<option value="${m}" ${m===sel?'selected':''}>${m===24*60?'24:00':fmtTime(m)}</option>`;}return o;};
+  modal({
+    title:"Tijdspanne",
+    sub:"Begin- en einduur van de tijdlijn.",
+    body:`<div class="modal-row">
+        <label class="fld">Begint om<select id="tStart">${opt(state.dayStart)}</select></label>
+        <label class="fld">Eindigt om<select id="tEnd">${opt(state.dayEnd)}</select></label>
+      </div>`,
+    actions:[
+      {label:"Annuleren", cls:"btn-ghost", onClick:c=>c()},
+      {label:"Toepassen", cls:"btn-primary", onClick:(close)=>{
+        const s=+document.getElementById('tStart').value, e=+document.getElementById('tEnd').value;
+        if(e<=s){ toast("Einduur moet na het beginuur liggen"); return; }
+        state.dayStart=s; state.dayEnd=e;
+        // clamp bestaande blokken
+        state.blocks.forEach(b=>{ b.start=Math.max(s,Math.min(e-SLOT,b.start)); b.end=Math.max(b.start+SLOT,Math.min(e,b.end)); });
+        close(); commit("Tijden aangepast");
+      }}
+    ]
+  });
+}
+
+/* ============================================================
+   EXPORT / IMPORT / NEW
+   ============================================================ */
+function doExport(){
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const base = (state.eventName||"event").replace(/[^\w\-]+/g,"_").toLowerCase();
+  a.href=url; a.download=`planning_${base}_${state.eventDate}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast("Bestand opgeslagen — deel het met je collega's");
+}
+function doImport(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const s=JSON.parse(fr.result);
+      if(!s || !Array.isArray(s.rooms)) throw new Error("ongeldig");
+      state = migrate(s);
+      commit("Planning geopend");
+    }catch(e){ toast("Kon dit bestand niet lezen"); }
+  };
+  fr.readAsText(file);
+}
+function doNew(){
+  if(confirm("Nieuwe lege planning starten? De huidige wordt vervangen (sla eerst op als je ze wilt bewaren).")){
+    state = defaultState();
+    commit("Nieuwe planning");
+  }
+}
+
+/* ---------- Delen via link / QR / WhatsApp (data zit in de link) ---------- */
+function encodeState(){ return LZString.compressToEncodedURIComponent(JSON.stringify(state)); }
+function shareURL(){ return location.href.split('#')[0] + "#p=" + encodeState(); }
+
+function tryLoadFromHash(){
+  const m = (location.hash||"").match(/[#&]p=([^&]+)/);
+  if(!m) return false;
+  try{
+    const json = LZString.decompressFromEncodedURIComponent(m[1]);
+    const s = JSON.parse(json);
+    if(!s || !Array.isArray(s.rooms)) return false;
+    const localHasWork = state.rooms.length || state.blocks.length;
+    if(localHasWork && !confirm("Een gedeelde planning openen via deze link? Dit vervangt je huidige planning op dit toestel.")){
+      history.replaceState(null,'',location.href.split('#')[0]);
+      return false;
+    }
+    state = migrate(s); save();
+    history.replaceState(null,'',location.href.split('#')[0]); // hash opruimen
+    return true;
+  }catch(e){ return false; }
+}
+
+function openShareModal(){
+  const url = shareURL();
+  const isFile = location.protocol === 'file:';
+  const waText = `Planning "${state.eventName||'Event'}" – open hem hier:`;
+  const waLink = "https://wa.me/?text=" + encodeURIComponent(waText + "\n" + url);
+
+  modal({
+    title:"Delen",
+    sub:"De volledige planning zit in de link zelf — geen bestand nodig.",
+    body:`
+      ${isFile ? `<div class="warn-box">⚠️ Je opent deze app als lokaal bestand. De link werkt dan alleen op jóuw pc.
+        Zet de app online (bv. GitHub Pages) zodat collega's hem kunnen openen. Vraag dit gerust.</div>` : ``}
+      <div class="qr-wrap" id="qrWrap"></div>
+      <div class="field-group">
+        <span class="lbl">Deel-link</span>
+        <div class="link-row">
+          <input type="text" id="shareUrl" readonly value="${esc(url)}" />
+          <button class="btn btn-outline btn-sm" id="copyBtn">Kopieer</button>
+        </div>
+        <div class="hint" id="sizeHint"></div>
+      </div>
+      <div class="share-actions">
+        <a class="btn btn-primary" id="waBtn" href="${waLink}" target="_blank" rel="noopener">💬 WhatsApp</a>
+        <button class="btn btn-outline" id="nativeShare" style="display:none">📤 Delen via toestel…</button>
+      </div>`,
+    actions:[{label:"Sluiten", cls:"btn-ghost", onClick:c=>c()}],
+    onBody:(root)=>{
+      // QR
+      const qrWrap = root.querySelector('#qrWrap');
+      try{
+        const qr = qrcode(0, 'M');     // type 0 = auto, M = medium error correction
+        qr.addData(url);
+        qr.make();
+        qrWrap.innerHTML = qr.createImgTag(5, 12);
+        const img = qrWrap.querySelector('img');
+        if(img){ img.style.width="220px"; img.style.height="220px"; img.alt="QR-code"; }
+      }catch(e){
+        qrWrap.innerHTML = `<div class="warn-box" style="margin:0">De planning is te groot voor een QR-code.
+          Gebruik de WhatsApp- of kopieer-knop hieronder.</div>`;
+      }
+      // size hint
+      const bytes = url.length;
+      root.querySelector('#sizeHint').textContent = `Link-lengte: ${bytes.toLocaleString('nl-BE')} tekens` +
+        (bytes>1800 ? " — grote planning; QR kan beperkt zijn, link/WhatsApp werkt altijd." : "");
+      // copy
+      root.querySelector('#copyBtn').onclick = async ()=>{
+        const inp = root.querySelector('#shareUrl');
+        try{ await navigator.clipboard.writeText(inp.value); toast("Link gekopieerd"); }
+        catch(_){ inp.select(); document.execCommand('copy'); toast("Link gekopieerd"); }
+      };
+      // native share (mobiel)
+      if(navigator.share){
+        const ns = root.querySelector('#nativeShare');
+        ns.style.display='inline-flex';
+        ns.onclick = ()=> navigator.share({title:"Event planning", text:waText, url}).catch(()=>{});
+      }
+    }
+  });
+}
+
+/* ============================================================
+   MODAL ENGINE + TOAST
+   ============================================================ */
+let activeModal=null;
+function modal({title, sub, body, actions, cls, onBody, onClose}){
+  closeModal();
+  const back=document.createElement('div'); back.className='modal-backdrop';
+  const m=document.createElement('div'); m.className='modal '+(cls||"");
+  m.innerHTML=`<h2>${esc(title)}</h2>${sub?`<div class="sub">${sub}</div>`:''}<div class="m-body"></div><div class="modal-actions"></div>`;
+  m.querySelector('.m-body').innerHTML = body;
+  const act=m.querySelector('.modal-actions');
+  (actions||[]).forEach(a=>{
+    const b=document.createElement('button');
+    b.className='btn '+(a.cls||'btn-ghost');
+    b.textContent=a.label;
+    b.onclick=()=>a.onClick(closeModal);
+    act.appendChild(b);
+  });
+  back.appendChild(m); document.body.appendChild(back);
+  back.onclick=(e)=>{ if(e.target===back) closeModal(); };
+  activeModal={back,onClose};
+  if(onBody) onBody(m.querySelector('.m-body'));
+  document.addEventListener('keydown', escClose);
+}
+function closeModal(){
+  if(!activeModal) return;
+  const oc=activeModal.onClose;
+  activeModal.back.remove(); activeModal=null;
+  document.removeEventListener('keydown', escClose);
+  if(oc) oc();
+}
+function escClose(e){ if(e.key==='Escape') closeModal(); }
+
+let toastTimer=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ============================================================
+   TOPBAR BINDINGS
+   ============================================================ */
+document.getElementById('eventName').addEventListener('input', e=>{ state.eventName=e.target.value; save(); });
+document.getElementById('eventDate').addEventListener('change', e=>{ state.eventDate=e.target.value; save(); });
+document.getElementById('btnTimes').onclick = openTimesModal;
+document.getElementById('btnColleagues').onclick = openColleaguesModal;
+document.getElementById('btnTypes').onclick = openTypesModal;
+document.getElementById('btnShare').onclick = openShareModal;
+document.getElementById('btnExport').onclick = doExport;
+document.getElementById('btnPrint').onclick = ()=>window.print();
+document.getElementById('btnNew').onclick = doNew;
+document.getElementById('btnImport').onclick = ()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').addEventListener('change', e=>{
+  if(e.target.files[0]) doImport(e.target.files[0]);
+  e.target.value="";
+});
+
+/* eerst kijken of er een gedeelde planning in de link zit */
+tryLoadFromHash();
+
+/* first paint */
+render();
+</script>
+</body>
+</html>
